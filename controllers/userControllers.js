@@ -117,14 +117,142 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+// CHANGE USER AVATAR (PROFILE PICTURE)
+//POST : api/users/change-avatar
+//Protected
+const changeAvatar = async (req, res, next) => {
+  try {
+      if (!req.files || !req.files.avatar) {
+          return next(new HttpError("Please Choose An Image.", 422));
+      }
+
+      const { avatar } = req.files;
+
+      // Check File Size
+      if (avatar.size > 500000) {
+          return next(new HttpError("Profile Picture too big. Should be less than 500kb", 422));
+      }
+      // Find user from Database (example: MongoDB)
+      const user = await User.findById(req.user.id);
+      // Delete old Avatar if exists
+      if (user.avatar) {
+          try {
+              const oldAvatarFile = bucket.file(`uploads/avatars/${user.avatar}`);
+              const [exists] = await oldAvatarFile.exists();
+              if (exists) {
+                  await oldAvatarFile.delete();
+                  console.log(`Old avatar ${user.avatar} deleted successfully`);
+              } else {
+                  console.log(`Old avatar ${user.avatar} not found in storage`);
+              }
+          } catch (error) {
+              console.error("Error deleting old avatar:", error);
+              // Handle deletion error gracefully, such as logging or continuing without blocking
+          }
+      }
+      // Generate new filename for avatar
+      const fileName = `${uuid()}.${avatar.name.split('.').pop()}`;
+      const fileUpload = bucket.file(`uploads/avatars/${fileName}`);
+
+      // Create write stream for file upload
+      const avatarStream = fileUpload.createWriteStream({
+          metadata: {
+              contentType: avatar.mimetype,
+          },
+          resumable: false // Optional: Disables resumable uploads, useful for smaller files
+      });
+
+      // Handle upload errors
+      avatarStream.on('error', (err) => {
+          console.error("Error uploading avatar:", err);
+          return next(new HttpError("Failed to upload avatar", 500));
+      });
+
+      // Handle upload completion
+      avatarStream.on('finish', async () => {
+          // Make uploaded file publicly accessible
+          await fileUpload.makePublic();
+
+          // Get the public URL of the uploaded file
+          const avatarUrl = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
+
+          // Update user's avatar field in your database (if needed)
+          // Example: MongoDB update
+          await User.findByIdAndUpdate(req.user.id, { avatar: avatarUrl }, { new: true });
+
+          // Return the avatar URL to the client
+          res.status(200).json({ avatarUrl });
+      });
+
+      // Start uploading avatar data
+      avatarStream.end(avatar.data);
+
+  } catch (error) {
+      console.error("Change avatar error:", error);
+      return next(new HttpError(error.message, 500));
+  }
+};
 
 
+// EDIT USER DETAILS (from profile)
+//POST : api/users/edit-user
+//Protected
+const editUser = async (req, res, next) => {
+  try {
+    const { name, email, currentPassword, newPassword, confirmNewPassword } = req.body;
 
+    // Check if any required field is missing
+    if (!name || !email || !currentPassword || !newPassword || !confirmNewPassword) {
+      return next(new HttpError('Fill in all Fields', 422));
+    }
+
+    // Get user from database
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return next(new HttpError("User Not Found.", 403));
+    }
+
+    // Check if the new email doesn't already exist
+    const emailExists = await User.findOne({ email });
+    if (emailExists && emailExists._id.toString() !== req.user.id.toString()) {
+      return next(new HttpError("Email already Exists.", 422));
+    }
+
+    // Compare current password to database password
+    const validateUserPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validateUserPassword) {
+      return next(new HttpError("Invalid Current Password.", 422));
+    }
+
+    // Compare new passwords
+    if (newPassword !== confirmNewPassword) {
+      return next(new HttpError("New Passwords do not Match.", 422));
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+
+    // Update user info in database
+    const newInfo = await User.findByIdAndUpdate(
+      req.user.id,
+      { name, email, password: hash },
+      { new: true }
+    );
+
+    res.status(200).json(newInfo);
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return next(new HttpError(error.message || 'Internal Server Error', 500));
+  }
+}
 
 
 
 module.exports = {
     registerUser, loginUser
+, changeAvatar,
+    editUser
 }
 
 
