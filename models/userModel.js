@@ -24,13 +24,9 @@ const userSchema = new Schema({
     enum: ['student', 'teacher'],
     required: true
   },
-  photoUrl: {
-    type: String,
-   },
-//   posts: {
-//     type: Number,
-//     default: 0
-//   }
+  avatar: {
+    type: String
+},
 });
 
 module.exports = model('User', userSchema);
