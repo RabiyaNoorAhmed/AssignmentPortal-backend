@@ -12,6 +12,7 @@ admin.initializeApp({
 });
 
 const userRoutes = require('./routes/userRoutes');
+const notesRoutes = require('./routes/notesRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -21,14 +22,14 @@ app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(upload());
 app.use(cors({
-  origin: '*',
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
 
 // Routes
 app.use('/api/users', userRoutes);
-
+app.use('/api/notes', notesRoutes);
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
