@@ -7,17 +7,17 @@ const {
 } = require('../controllers/notesControllers');
 
 const router = express.Router();
-// const authMiddleware = require('../middleware/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 // Get notes by course and batch
-router.get('/filter', getNotesByCourseAndBatch);
+router.get('/filter', authMiddleware, getNotesByCourseAndBatch);
 
 // Add a new note
-router.post('/', addNote);
+router.post('/', authMiddleware, addNote);
 
 // Update a note
-router.patch('/:id', updateNote);
+router.patch('/:id', authMiddleware, updateNote);
 
 // Delete a note
-router.delete('/:id', deleteNote);
+router.delete('/:id', authMiddleware, deleteNote);
 
 module.exports = router;

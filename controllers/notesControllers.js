@@ -1,8 +1,7 @@
 const Note = require('../models/notesModel');
 const HttpError = require('../models/errorModel'); 
 const mongoose = require('mongoose');
-const admin = require('firebase-admin');
-const bucket = admin.storage().bucket();
+const uploadFile = require('../utils/uploadFile');
 
 // Get notes by course and batch
 const getNotesByCourseAndBatch = async (req, res, next) => {
@@ -26,20 +25,6 @@ const getNotesByCourseAndBatch = async (req, res, next) => {
   };
   
 
-// Add a new note
-const uploadFile = async (file, fileName) => {
-    const bucket = admin.storage().bucket();
-    const fileUpload = bucket.file(fileName);
-  
-    await fileUpload.save(file.data, {
-      metadata: {
-        contentType: file.mimetype
-      }
-    });
-  
-    return fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-  };
-  
   // Add a new note
   const addNote = async (req, res, next) => {
     try {
