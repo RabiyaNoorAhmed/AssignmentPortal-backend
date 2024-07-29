@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/userModel');
+const mongoose = require('mongoose');
 const HttpError = require('../models/errorModel');
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
@@ -64,7 +65,7 @@ const registerUser = async (req, res, next) => {
   }
 };
 
-  
+
 
 
 
@@ -77,121 +78,140 @@ const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Check if all fields are filled
     if (!email || !password) {
-      console.log("Email or password missing");
       return next(new HttpError("Fill in all fields", 422));
     }
 
-    // Convert email to lowercase
-    const newEmail = email.toLowerCase();
-
-    // Check if the user exists
-    const user = await User.findOne({ email: newEmail });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      console.log(`User not found with email: ${newEmail}`);
       return next(new HttpError("Invalid credentials", 422));
     }
 
-    // Compare the provided password with the stored hashed password
     const comparePass = await bcrypt.compare(password, user.password);
     if (!comparePass) {
-      console.log("Password mismatch for user:", newEmail);
       return next(new HttpError("Invalid credentials", 422));
     }
 
-    // Extract user details
-    const { _id: id, name, gender, role, photoUrl } = user;
-
-    // Generate a JWT token
+    const { _id: id, name, gender, role, avatar } = user;
     const token = jwt.sign({ id, name, gender, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-    console.log(`User ${name} logged in successfully`);
-
-    // Send the response with token and user details
-    res.status(200).json({ token, id, name, gender, role, photoUrl });
-
+    res.status(200).json({ token, id, name, role, avatar });
   } catch (error) {
-    console.error("Login error:", error);
     return next(new HttpError("Login failed. Please check your credentials", 500));
   }
 };
+
+
+// USER PROFILE
+//POST : api/users/:id
+//Protected
+const getUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Validate id format
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const user = await User.findById(id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      // Any other fields you wish to send can be added here
+    });
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
 
 // CHANGE USER AVATAR (PROFILE PICTURE)
 //POST : api/users/change-avatar
 //Protected
 const changeAvatar = async (req, res, next) => {
   try {
-      if (!req.files || !req.files.avatar) {
-          return next(new HttpError("Please Choose An Image.", 422));
+    if (!req.files || !req.files.avatar) {
+      return next(new HttpError("Please Choose An Image.", 422));
+    }
+
+    const { avatar } = req.files;
+
+    // Check File Size
+    if (avatar.size > 500000) {
+      return next(new HttpError("Profile Picture too big. Should be less than 500kb", 422));
+    }
+
+    // Find user from Database
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return next(new HttpError("User not found", 404));
+    }
+
+    // Delete old Avatar if exists
+    if (user.avatar) {
+      try {
+        const oldAvatarFile = bucket.file(`uploads/avatars/${user.avatar.split('/').pop()}`);
+        const [exists] = await oldAvatarFile.exists();
+        if (exists) {
+          await oldAvatarFile.delete();
+          console.log(`Old avatar ${user.avatar} deleted successfully`);
+        }
+      } catch (error) {
+        console.error("Error deleting old avatar:", error);
       }
+    }
 
-      const { avatar } = req.files;
+    // Generate new filename for avatar
+    const fileName = `${uuid()}.${avatar.name.split('.').pop()}`;
+    const fileUpload = bucket.file(`uploads/avatars/${fileName}`);
 
-      // Check File Size
-      if (avatar.size > 500000) {
-          return next(new HttpError("Profile Picture too big. Should be less than 500kb", 422));
-      }
-      // Find user from Database (example: MongoDB)
-      const user = await User.findById(req.user.id);
-      // Delete old Avatar if exists
-      if (user.avatar) {
-          try {
-              const oldAvatarFile = bucket.file(`uploads/avatars/${user.avatar}`);
-              const [exists] = await oldAvatarFile.exists();
-              if (exists) {
-                  await oldAvatarFile.delete();
-                  console.log(`Old avatar ${user.avatar} deleted successfully`);
-              } else {
-                  console.log(`Old avatar ${user.avatar} not found in storage`);
-              }
-          } catch (error) {
-              console.error("Error deleting old avatar:", error);
-              // Handle deletion error gracefully, such as logging or continuing without blocking
-          }
-      }
-      // Generate new filename for avatar
-      const fileName = `${uuid()}.${avatar.name.split('.').pop()}`;
-      const fileUpload = bucket.file(`uploads/avatars/${fileName}`);
+    // Create write stream for file upload
+    const avatarStream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: avatar.mimetype,
+      },
+      resumable: false
+    });
 
-      // Create write stream for file upload
-      const avatarStream = fileUpload.createWriteStream({
-          metadata: {
-              contentType: avatar.mimetype,
-          },
-          resumable: false // Optional: Disables resumable uploads, useful for smaller files
-      });
+    // Handle upload errors
+    avatarStream.on('error', (err) => {
+      console.error("Error uploading avatar:", err);
+      return next(new HttpError("Failed to upload avatar", 500));
+    });
 
-      // Handle upload errors
-      avatarStream.on('error', (err) => {
-          console.error("Error uploading avatar:", err);
-          return next(new HttpError("Failed to upload avatar", 500));
-      });
+    // Handle upload completion
+    avatarStream.on('finish', async () => {
+      // Make uploaded file publicly accessible
+      await fileUpload.makePublic();
 
-      // Handle upload completion
-      avatarStream.on('finish', async () => {
-          // Make uploaded file publicly accessible
-          await fileUpload.makePublic();
+      // Get the public URL of the uploaded file
+      const avatarUrl = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
 
-          // Get the public URL of the uploaded file
-          const avatarUrl = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
+      // Update user's avatar field in your database
+      await User.findByIdAndUpdate(req.user.id, { avatar: avatarUrl }, { new: true });
 
-          // Update user's avatar field in your database (if needed)
-          // Example: MongoDB update
-          await User.findByIdAndUpdate(req.user.id, { avatar: avatarUrl }, { new: true });
+      // Return the avatar URL to the client
+      res.status(200).json({ avatarUrl });
+    });
 
-          // Return the avatar URL to the client
-          res.status(200).json({ avatarUrl });
-      });
-
-      // Start uploading avatar data
-      avatarStream.end(avatar.data);
+    // Start uploading avatar data
+    avatarStream.end(avatar.data);
 
   } catch (error) {
-      console.error("Change avatar error:", error);
-      return next(new HttpError(error.message, 500));
+    console.error("Change avatar error:", error);
+    return next(new HttpError(error.message, 500));
   }
 };
+
 
 
 // EDIT USER DETAILS (from profile)
@@ -250,9 +270,9 @@ const editUser = async (req, res, next) => {
 
 
 module.exports = {
-    registerUser, loginUser
-, changeAvatar,
-    editUser
+  registerUser, loginUser, getUser
+  , changeAvatar,
+  editUser
 }
 
 

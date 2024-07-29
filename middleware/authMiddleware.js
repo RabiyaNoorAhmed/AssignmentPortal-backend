@@ -9,6 +9,7 @@ const authMiddleware = async (req, res, next) => {
         jwt.verify(token, process.env.JWT_SECRET, (err, info) => {
             if (err) {
                 return next(new HttpError("Unauthorized. Invalid token.", 403))
+                
             }
      
      req.user = info;
