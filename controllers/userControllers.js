@@ -11,8 +11,9 @@ const bucket = admin.storage().bucket();
 
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, confirmPassword, gender, role } = req.body;
+    const { name, email, password, confirmPassword, gender, role, course, batch } = req.body;
 
+    // Validate fields
     if (!name || !email || !password || !confirmPassword || !gender || !role) {
       return next(new HttpError("Fill In All Fields", 422));
     }
@@ -20,7 +21,6 @@ const registerUser = async (req, res, next) => {
     // Validate gender and role
     const validGenders = ['male', 'female', 'other'];
     const validRoles = ['student', 'teacher'];
-
     if (!validGenders.includes(gender.toLowerCase())) {
       return next(new HttpError("Invalid gender value", 422));
     }
@@ -53,6 +53,8 @@ const registerUser = async (req, res, next) => {
       password: hashedPass,
       gender,
       role,
+      course: role === 'student' ? course : undefined,
+      batch: role === 'student' ? batch : undefined
     });
 
     await newUser.save();
@@ -64,6 +66,7 @@ const registerUser = async (req, res, next) => {
     return next(new HttpError("User registration failed", 500));
   }
 };
+
 
 
 

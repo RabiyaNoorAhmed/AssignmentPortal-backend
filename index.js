@@ -5,6 +5,7 @@ const upload = require('express-fileupload');
 require('dotenv').config();
 const admin = require('firebase-admin');
 const serviceAccount = require('./firebase-adminsdk.json');
+const totalassignment  = require( './routes/Dashboard/tAssignmentRoutes')
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -32,6 +33,10 @@ app.use(cors({
 app.use('/api/users', userRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/assignments', assignmentRoutes);
+
+// Dashboard
+app.use('/api/assignments', totalassignment);
+
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);

@@ -26,7 +26,15 @@ const userSchema = new Schema({
   },
   avatar: {
     type: String
-},
+  },
+  course: {
+    type: String, // Course name
+    required: function() { return this.role === 'student'; } // Only required for students
+  },
+  batch: {
+    type: String, // Batch name
+    required: function() { return this.role === 'student'; } // Only required for students
+  }
 });
 
 module.exports = model('User', userSchema);
