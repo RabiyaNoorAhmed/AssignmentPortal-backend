@@ -2,14 +2,22 @@ const express = require('express');
 const router = express.Router();
 const Assignment = require('../../models/assignmentModel');
 
-// Route to get the total number of assignments
-router.get('/total-assignments', async (req, res) => {
+
+// Route to get the total number of assignments based on course and batch
+router.get('/assignments/count', async (req, res) => {
   try {
-    const totalAssignments = await Assignment.countDocuments();
+    const { course, batch } = req.query;
+
+    if (!course || !batch) {
+      return res.status(400).json({ message: 'Course and batch are required' });
+    }
+
+    const totalAssignments = await Assignment.countDocuments({ course, batch });
+    console.log('Total Assignments:', totalAssignments)
     res.json({ totalAssignments });
   } catch (error) {
-    console.error('Error fetching total assignments:', error);
-    res.status(500).json({ message: 'Error fetching total assignments', error: error.message });
+    console.error('Error fetching assignments:', error);
+    res.status(500).json({ message: 'Error fetching assignments' });
   }
 });
 

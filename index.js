@@ -6,6 +6,8 @@ require('dotenv').config();
 const admin = require('firebase-admin');
 const serviceAccount = require('./firebase-adminsdk.json');
 const totalassignment  = require( './routes/Dashboard/tAssignmentRoutes')
+const totalstudent  = require( './routes/Dashboard/tStudentRoutes')
+
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -35,7 +37,8 @@ app.use('/api/notes', notesRoutes);
 app.use('/api/assignments', assignmentRoutes);
 
 // Dashboard
-app.use('/api/assignments', totalassignment);
+app.use('/api', totalassignment);
+app.use('/api/students', totalstudent);
 
 // Error handling middleware
 app.use(notFound);
