@@ -17,6 +17,7 @@ admin.initializeApp({
 const userRoutes = require('./routes/userRoutes');
 const notesRoutes = require('./routes/notesRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
+const submitAssignmentRoutes = require('./routes/submitAssignmentRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const app = express();
 
@@ -35,6 +36,7 @@ app.use(cors({
 app.use('/api/users', userRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/assignments', submitAssignmentRoutes);
 
 // Dashboard
 app.use('/api', totalassignment);

@@ -95,16 +95,15 @@ const loginUser = async (req, res, next) => {
       return next(new HttpError("Invalid credentials", 422));
     }
 
-    const { _id: id, name, gender, role, avatar, course, batch } = user;
+    const { _id: id, name, gender, role, avatar, course, batch } = user; // include course and batch
     const token = jwt.sign({ id, name, gender, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-    res.status(200).json({ token, id, name, role, avatar, course, batch });
+    // Include course and batch in the response if the user is a student
+    res.status(200).json({ token, id, name, role, avatar, ...(role === 'student' && { course, batch }) });
   } catch (error) {
     return next(new HttpError("Login failed. Please check your credentials", 500));
   }
 };
-
-
 
 // USER PROFILE
 //POST : api/users/:id
