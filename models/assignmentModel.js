@@ -33,6 +33,10 @@ const assignmentSchema = new Schema({
      type: String, 
      required: true 
     },
+    submitted: {  // Added field
+      type: Boolean,
+      default: false
+    }
 });
 
 module.exports = model('Assignment', assignmentSchema);
