@@ -167,15 +167,20 @@ const updateSubmission = async (req, res) => {
             return res.status(404).json({ message: 'Submission not found' });
         }
 
-        // Determine pass/fail based on marks
-        const totalMarks = 100; // You might want to get this dynamically if it varies
+        // Assuming you have a separate model or schema for assignments
+        const assignment = await Assignment.findById(submission.assignmentId); // Fetch the assignment details
+        if (!assignment) {
+            return res.status(404).json({ message: 'Assignment not found' });
+        }
+
+        const totalMarks = assignment.totalMarks;
         const passingPercentage = 50;
         const percentage = (marks / totalMarks) * 100;
         const passFailStatus = percentage >= passingPercentage ? 'Pass' : 'Fail';
 
         submission.marks = marks;
         submission.comments = comments;
-        submission.passFailStatus = passFailStatus
+        submission.passFailStatus = passFailStatus;
 
         await submission.save();
         res.status(200).json({ message: 'Submission updated successfully', submission });
@@ -184,6 +189,7 @@ const updateSubmission = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 
 const getAssignments = async (req, res) => {
