@@ -16,7 +16,7 @@ const assignmentSubmissionSchema = new mongoose.Schema({
         required: true
     },
     rollNo: {
-        type: Number,
+        type: String,
         required: true
     },
     title: {
@@ -40,7 +40,21 @@ const assignmentSubmissionSchema = new mongoose.Schema({
     submittedAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    submitted: {
+        type: Boolean
+    },
+    marks: { 
+        type: Number 
+    },
+    comments:{
+         type: String
+         },
+        passFailStatus: { 
+            type: String,
+            enum: ['Pass', 'Fail', 'Pending'],
+           default: 'Pending'
+        }
 });
 
 const AssignmentSubmission = mongoose.model('AssignmentSubmission', assignmentSubmissionSchema);

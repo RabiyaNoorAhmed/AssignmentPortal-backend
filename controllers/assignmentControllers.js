@@ -2,11 +2,12 @@
 const Assignment = require('../models/assignmentModel');
 const uploadFile = require('../utils/uploadFile');
 const mongoose = require('mongoose');
-
+const HttpError = require('../models/errorModel');
 
 const getAssignments = async (req, res, next) => {
     const { course, batch } = req.query;
-  
+    // Debug logging
+    
     if (!course || !batch) {
       return next(new HttpError('Course and batch parameters are required', 400));
     }
@@ -17,8 +18,8 @@ const getAssignments = async (req, res, next) => {
       if (!assignments.length) {
         return res.status(404).json({ message: 'No assignments found for the specified course and batch' });
       }
-  
       res.status(200).json(assignments);
+      
     } catch (error) {
       next(new HttpError('Failed to retrieve assignments', 500));
     }

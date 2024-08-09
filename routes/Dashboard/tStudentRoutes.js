@@ -19,4 +19,31 @@ router.get('/count', async (req, res) => {
   }
 });
 
+
+router.get('/missing-assignments-count', async (req, res) => {
+  try {
+    const { studentId } = req.query;
+
+    if (!studentId) {
+      return res.status(400).json({ message: 'Student ID is required' });
+    }
+
+    // Assuming you have a way to identify which assignments belong to the student
+    const assignments = await Assignment.find({
+      studentId: studentId,
+      dueDate: { $lt: new Date() },
+      submitted: false, // Assuming you have a `submitted` field
+    });
+
+    res.json({ count: assignments.length });
+  } catch (error) {
+    console.error('Error fetching missing assignments count:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
+
+
+
 module.exports = router;

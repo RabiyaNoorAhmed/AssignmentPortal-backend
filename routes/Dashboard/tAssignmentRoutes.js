@@ -13,7 +13,7 @@ router.get('/assignments/count', async (req, res) => {
     }
 
     const totalAssignments = await Assignment.countDocuments({ course, batch });
-    console.log('Total Assignments:', totalAssignments)
+    // console.log('Total Assignments:', totalAssignments)
     res.json({ totalAssignments });
   } catch (error) {
     console.error('Error fetching assignments:', error);
